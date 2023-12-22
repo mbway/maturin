@@ -1,6 +1,9 @@
 name: Test
 
 on:
+  push:
+    branches:
+      - "testing_improved_import_hook"
   pull_request:
     paths-ignore:
       - "guide/**"
@@ -38,7 +41,7 @@ jobs:
             const OS = yaml.load(process.env.OS_MATRIX)
             const PYTHON_VERSIONS = yaml.load(process.env.PYTHON_VERSION)
 
-            if (context.eventName == 'workflow_dispatch' || context.eventName == 'merge_group') {
+            if (true) {
               // Run all of them on workflow dispatch or merge group
               core.setOutput('os', OS)
               core.setOutput('python-version', PYTHON_VERSIONS)
@@ -64,16 +67,16 @@ jobs:
     env:
       OS_MATRIX: |
         - ubuntu-latest
-        - macos-13
-        - windows-latest
+        #- macos-13
+        #- windows-latest
       PYTHON_VERSION: |
-        - '3.8'
-        - '3.9'
-        - '3.10'
-        - '3.11'
+        #- '3.8'
+        #- '3.9'
+        #- '3.10'
+        #- '3.11'
         - '3.12'
-        - 'pypy3.9'
-        - 'pypy3.10'
+        #- 'pypy3.9'
+        #- 'pypy3.10'
 
   test:
     name: Test
@@ -87,17 +90,17 @@ jobs:
     env:
       RUST_BACKTRACE: "1"
       SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: "sccache"
+      #RUSTC_WRAPPER: "sccache"
     steps:
       - name: Cleanup Disk
         if: ${{ !startsWith(matrix.os, 'windows') }}
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
-      - name: Sccache Setup
-        uses: mozilla-actions/sccache-action@v0.0.3
-        with:
-          version: "v0.5.3"
+      #- name: Sccache Setup
+      #  uses: mozilla-actions/sccache-action@v0.0.3
+      #  with:
+      #    version: "v0.5.3"
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -157,72 +160,72 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         run: echo "RUSTFLAGS="-C debuginfo=0"" >> $GITHUB_ENV
       - name: cargo test
-        run: cargo nextest run --features password-storage
-      - name: test cross compiling with zig
-        if: ${{ !contains(matrix.python-version, '-dev') }}
-        shell: bash
-        run: |
-          set -ex
-          rustup target add aarch64-unknown-linux-gnu
-          rustup target add aarch64-unknown-linux-musl
-          rustup target add aarch64-apple-darwin
+        run: cargo nextest run --features password-storage --
+      #- name: test cross compiling with zig
+      #  if: ${{ !contains(matrix.python-version, '-dev') }}
+      #  shell: bash
+      #  run: |
+      #    set -ex
+      #    rustup target add aarch64-unknown-linux-gnu
+      #    rustup target add aarch64-unknown-linux-musl
+      #    rustup target add aarch64-apple-darwin
 
-          # abi3
-          cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-unknown-linux-gnu --zig
-          cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-unknown-linux-musl --zig
-          if [[ "$PYTHON_VERSION" != "pypy"* ]]; then
-            cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-apple-darwin --zig
-          fi
+      #    # abi3
+      #    cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-unknown-linux-gnu --zig
+      #    cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-unknown-linux-musl --zig
+      #    if [[ "$PYTHON_VERSION" != "pypy"* ]]; then
+      #      cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-pure/Cargo.toml --target aarch64-apple-darwin --zig
+      #    fi
 
-          if [[ "$PYTHON_VERSION" == "3.1"* ]]; then
-            # Check abi3 wheels with abi3audit on CPython only
-            pip install abi3audit
-            abi3audit test-crates/pyo3-pure/target/wheels/*.whl
-          fi
-          # Check wheels with twine
-          twine check --strict test-crates/pyo3-pure/target/wheels/*.whl
+      #    if [[ "$PYTHON_VERSION" == "3.1"* ]]; then
+      #      # Check abi3 wheels with abi3audit on CPython only
+      #      pip install abi3audit
+      #      abi3audit test-crates/pyo3-pure/target/wheels/*.whl
+      #    fi
+      #    # Check wheels with twine
+      #    twine check --strict test-crates/pyo3-pure/target/wheels/*.whl
 
-          # non-abi3
-          cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-mixed/Cargo.toml --target aarch64-unknown-linux-gnu --zig
-          if [[ "$PYTHON_VERSION" != "pypy"* ]]; then
-            cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-mixed/Cargo.toml --target aarch64-apple-darwin --zig
-          fi
-          # Check wheels with twine
-          twine check --strict test-crates/pyo3-mixed/target/wheels/*.whl
-      - name: test cross compiling windows wheel
-        if: ${{ matrix.os == 'ubuntu-latest' && !contains(matrix.python-version, 'pypy') && !contains(matrix.python-version, '-dev') }}
-        run: |
-          set -ex
-          sudo apt-get install -y mingw-w64
-          rustup component add llvm-tools-preview
-          rustup target add x86_64-pc-windows-gnu
-          rustup target add x86_64-pc-windows-msvc
+      #    # non-abi3
+      #    cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-mixed/Cargo.toml --target aarch64-unknown-linux-gnu --zig
+      #    if [[ "$PYTHON_VERSION" != "pypy"* ]]; then
+      #      cargo run -- build -i $PYTHON_VERSION -m test-crates/pyo3-mixed/Cargo.toml --target aarch64-apple-darwin --zig
+      #    fi
+      #    # Check wheels with twine
+      #    twine check --strict test-crates/pyo3-mixed/target/wheels/*.whl
+      #- name: test cross compiling windows wheel
+      #  if: ${{ matrix.os == 'ubuntu-latest' && !contains(matrix.python-version, 'pypy') && !contains(matrix.python-version, '-dev') }}
+      #  run: |
+      #    set -ex
+      #    sudo apt-get install -y mingw-w64
+      #    rustup component add llvm-tools-preview
+      #    rustup target add x86_64-pc-windows-gnu
+      #    rustup target add x86_64-pc-windows-msvc
 
-          # abi3
-          cargo run -- build -m test-crates/pyo3-pure/Cargo.toml --target x86_64-pc-windows-gnu
-          cargo run -- build -m test-crates/pyo3-pure/Cargo.toml --target x86_64-pc-windows-msvc
+      #    # abi3
+      #    cargo run -- build -m test-crates/pyo3-pure/Cargo.toml --target x86_64-pc-windows-gnu
+      #    cargo run -- build -m test-crates/pyo3-pure/Cargo.toml --target x86_64-pc-windows-msvc
 
-          # no-abi3
-          cargo run -- build -i "python${PYTHON_VERSION}" -m test-crates/pyo3-mixed/Cargo.toml --target x86_64-pc-windows-msvc
-      - name: test compiling with PYO3_CONFIG_FILE
-        shell: bash
-        run: |
-          set -ex
-          rustup target add x86_64-unknown-linux-gnu
-          export PYO3_CONFIG_FILE=$(pwd)/test-crates/pyo3-mixed/pyo3-config.txt
-          cargo run -- build -m test-crates/pyo3-mixed/Cargo.toml --target x86_64-unknown-linux-gnu --zig
-      - name: test maturin new
-        shell: bash
-        run: |
-          set -ex
-          cargo run new -b pyo3 test-crates/pyo3-new
-          cargo run build -m test-crates/pyo3-new/Cargo.toml --target-dir test-crates/targets/
-          cargo run new --mixed -b pyo3 test-crates/pyo3-new-mixed
-          cargo run build -m test-crates/pyo3-new-mixed/Cargo.toml --target-dir test-crates/targets/
+      #    # no-abi3
+      #    cargo run -- build -i "python${PYTHON_VERSION}" -m test-crates/pyo3-mixed/Cargo.toml --target x86_64-pc-windows-msvc
+      #- name: test compiling with PYO3_CONFIG_FILE
+      #  shell: bash
+      #  run: |
+      #    set -ex
+      #    rustup target add x86_64-unknown-linux-gnu
+      #    export PYO3_CONFIG_FILE=$(pwd)/test-crates/pyo3-mixed/pyo3-config.txt
+      #    cargo run -- build -m test-crates/pyo3-mixed/Cargo.toml --target x86_64-unknown-linux-gnu --zig
+      #- name: test maturin new
+      #  shell: bash
+      #  run: |
+      #    set -ex
+      #    cargo run new -b pyo3 test-crates/pyo3-new
+      #    cargo run build -m test-crates/pyo3-new/Cargo.toml --target-dir test-crates/targets/
+      #    cargo run new --mixed -b pyo3 test-crates/pyo3-new-mixed
+      #    cargo run build -m test-crates/pyo3-new-mixed/Cargo.toml --target-dir test-crates/targets/
 
   test-emscripten:
     name: Test Emscripten
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     env:
       PYODIDE_VERSION: "0.23.4"
@@ -259,7 +262,7 @@ jobs:
 
   test-alpine:
     name: Test Alpine Linux
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: "1"
@@ -288,7 +291,7 @@ jobs:
 
   test-auditwheel:
     name: Test Auditwheel
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'CI-no-fail-fast') }}
@@ -316,7 +319,7 @@ jobs:
 
   test-docker:
     name: Test Docker
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     env:
       CARGO_INCREMENTAL: "0"
@@ -347,7 +350,7 @@ jobs:
 
   test-cross-compile:
     name: Test Cross Compile
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     container: ${{ matrix.platform.container }}
     strategy:
@@ -400,6 +403,7 @@ jobs:
 
   test-bootstrap:
     name: Test Bootstrap
+    if: false
     runs-on: ${{ matrix.os }}
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -453,6 +457,7 @@ jobs:
 
   test-msrv:
     name: Test MSRV
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -466,7 +471,7 @@ jobs:
 
   test-pyston:
     name: Test Pyston
-    if: github.event_name != 'pull_request'
+    if: false
     runs-on: ubuntu-latest
     container: pyston/pyston:2.3.5
     steps:
@@ -516,7 +521,7 @@ jobs:
 
   check:
     name: Check ${{ matrix.platform.target }}
-    if: github.event_name != 'pull_request'
+    if: true
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'CI-no-fail-fast') }}
       matrix:
