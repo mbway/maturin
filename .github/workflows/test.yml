@@ -67,7 +67,7 @@ jobs:
     env:
       OS_MATRIX: |
         - ubuntu-latest
-        #- macos-13
+        - macos-13
         - windows-latest
       PYTHON_VERSION: |
         #- '3.8'
